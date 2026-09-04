@@ -289,5 +289,5 @@ All 27 automated tests run locally in under 1 second without requiring external 
 - **Static vs. Dynamic Analysis:** Static analysis inspects declarative HCL files; it does not analyze live AWS IAM policies, SCPs, or runtime configuration drift.
 - **Provider Coverage:** Currently optimized for AWS Terraform resources; Azure and GCP policies are supported natively by Checkov but may require prompt tailoring for best LLM remediation results.
 - **Context Size:** Very large multi-module Terraform configurations should be broken down into individual resource modules before submitting for AI analysis.
-# AI-IaC-Security-Assistant
+
 # AI-IaC-Security-Assistant
