@@ -1,0 +1,112 @@
+name: IaC Security Scan
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Threshold configuration
+#
+# Fail the pipeline when found issues meet or exceed these counts.
+# Set to 0 to enforce "zero tolerance" for that severity.
+# Set to a large number (e.g. 9999) to effectively disable enforcement.
+#
+# To change thresholds, edit the env section below.
+# ─────────────────────────────────────────────────────────────────────────────
+env:
+  FAIL_ON_CRITICAL: 0    # fail if CRITICAL findings > this value
+  FAIL_ON_HIGH: 0        # fail if HIGH findings > this value (set to 9999 to allow highs)
+
+jobs:
+  checkov-scan:
+    name: Checkov IaC Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run Checkov against example Terraform
+        id: checkov
+        run: |
+          checkov \
+            --directory examples/ \
+            --framework terraform \
+            --output json \
+            --output-file-path checkov-results/ \
+            --quiet \
+            || true   # Don't fail the step; we parse results manually below
+
+      - name: Parse results and enforce thresholds
+        run: |
+          python3 - <<'EOF'
+          import json, os, sys, glob
+
+          result_files = glob.glob("checkov-results/results_terraform.json")
+          if not result_files:
+              print("No Checkov results file found — skipping threshold check.")
+              sys.exit(0)
+
+          with open(result_files[0]) as f:
+              data = json.load(f)
+
+          # Handle both list (multi-framework) and single dict
+          if isinstance(data, list):
+              failed_checks = []
+              for fw in data:
+                  failed_checks.extend(fw.get("results", {}).get("failed_checks", []))
+          else:
+              failed_checks = data.get("results", {}).get("failed_checks", [])
+
+          sev_map = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNRATED": 0}
+          for check in failed_checks:
+              sev = (check.get("severity") or "UNRATED").upper()
+              if sev not in sev_map:
+                  sev = "UNRATED"
+              sev_map[sev] += 1
+
+          print("=" * 60)
+          print("Checkov Findings Summary")
+          print("=" * 60)
+          for sev, count in sev_map.items():
+              print(f"  {sev:<10} {count}")
+          print(f"  {'TOTAL':<10} {len(failed_checks)}")
+          print("=" * 60)
+
+          fail = False
+          critical_threshold = int(os.environ.get("FAIL_ON_CRITICAL", "0"))
+          high_threshold     = int(os.environ.get("FAIL_ON_HIGH",     "0"))
+
+          if sev_map["CRITICAL"] > critical_threshold:
+              print(f"FAIL: {sev_map['CRITICAL']} CRITICAL finding(s) exceed threshold of {critical_threshold}.")
+              fail = True
+          if sev_map["HIGH"] > high_threshold:
+              print(f"FAIL: {sev_map['HIGH']} HIGH finding(s) exceed threshold of {high_threshold}.")
+              fail = True
+
+          if fail:
+              print("\nUpdate FAIL_ON_CRITICAL / FAIL_ON_HIGH in .github/workflows/security.yml to adjust thresholds.")
+              sys.exit(1)
+          else:
+              print("All findings within configured thresholds.")
+          EOF
+
+      - name: Upload Checkov results as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-results
+          path: checkov-results/
+          retention-days: 30

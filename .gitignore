@@ -1,0 +1,49 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Node / Frontend ──
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# ── Environment & Secrets ──
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ── Terraform ──
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+.terraform/
+.terraform.lock.hcl
+# NEVER commit plan output or state — it may contain sensitive data
+*.tfplan
+
+# ── OS / Editor ──
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Logs ──
+*.log
+logs/
+
+# ── Temp files created by AI-IaC Guard ──
+/tmp/aig_*
