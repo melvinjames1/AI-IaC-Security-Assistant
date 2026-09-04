@@ -290,3 +290,4 @@ All 27 automated tests run locally in under 1 second without requiring external 
 - **Provider Coverage:** Currently optimized for AWS Terraform resources; Azure and GCP policies are supported natively by Checkov but may require prompt tailoring for best LLM remediation results.
 - **Context Size:** Very large multi-module Terraform configurations should be broken down into individual resource modules before submitting for AI analysis.
 # AI-IaC-Security-Assistant
+# AI-IaC-Security-Assistant
